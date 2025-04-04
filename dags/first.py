@@ -1,5 +1,5 @@
 from airflow import DAG
-from airflow.operators.empty import EmptyOperator
+# from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 # from airflow.models import Variable  # переменные из настроек Airflow
 from datetime import datetime
@@ -83,7 +83,7 @@ with DAG(
 
     "first",
     default_args=default_args,
-    description="Даг простого ETL процесса. Чтением данные из csv файла, очищает, обрабатывает и выгружает в новый файл",
+    description="Даг простого ETL процесса. Читает данные из csv файла, очищает, обрабатывает и выгружает в новый файл",
     catchup=False,  # не выполняет запланированные по расписанию запуски DAG, которые находятся раньше текущей даты (если start_date раньше, чем текущая дата)
     schedule=None   # расписание в формате cron - с какой периодичностью будет автоматически выполняться DAG (None = DAG нужно запускать только мануально)
 
