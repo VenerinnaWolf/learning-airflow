@@ -1,25 +1,13 @@
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
-from airflow.models import Variable  # переменные из настроек Airflow
+# from airflow.models import Variable  # переменные из настроек Airflow
 from datetime import datetime
 
 import pandas as pd
 import os.path
 
 # ------- Переменные и константы -------
-
-# PATH_TO_FILES = Variable.get("path_to_files")  # = /files/
-# PATH_TO_TITANIC = f"{PATH_TO_FILES}titanic/"
-# EXPORT_PATH = "C:\\Users\\vzelikova\\airflow\\files\\titanic\\"
-#
-# # OS_PATH = os.getcwd()  # getcwd() вернет строку - текущий рабочий каталог
-# # FULL_PATH = os.path.join(os.getcwd(), PATH_TO_TITANIC)
-# # FULL_PATH = os.path.join(os.getcwd(), 'files/titanic', 'test_out2.csv')
-# # FULL_PATH = os.path.join(os.getcwd(), '/files/titanic', 'test_out2.csv')
-# # FULL_PATH = os.path.join(os.getcwd(), 'test_out2.csv')
-# # FULL_PATH = os.path.join(os.getcwd(), 'dags', 'test_out2.csv')
-# FULL_PATH = os.path.join(os.getcwd(), 'dags/output', 'test_out2.csv')
 
 INPUT_PATH = os.path.join(os.getcwd(), 'dags/input')
 OUTPUT_PATH = os.path.join(os.getcwd(), 'dags/output')
@@ -29,10 +17,13 @@ OUTPUT_PATH = os.path.join(os.getcwd(), 'dags/output')
 
 def import_data(file_name, file_path, **context):
     """Загрузить данные из csv файла и передать в XCOM"""
-    path = os.path.join(file_path, file_name)
-    # df = pd.read_csv(f"{file_path}{file_name}.csv")
+
+    # Загружаем данные из csv файла
+    path = os.path.join(file_path, file_name)  # полный путь до файла
     df = pd.read_csv(path)
-    print(df)  # !убрать!
+
+    # Логируем датафрейм, который выгрузили из файла
+    print(df)
 
     # Загружаем данные в XCOM переменную для использования в следующих тасках
     ti = context["task_instance"]
@@ -40,32 +31,41 @@ def import_data(file_name, file_path, **context):
 
 
 def transform_data(**context):
-    """Изменить данные"""
+    """Изменить данные. Очистить данные от пустых значений и выбрать только мужчин старше 30"""
 
     # Вытаскиваем из XCOM данные, переданные функцией import_data
     ti = context["task_instance"]
     df = ti.xcom_pull(key="data", task_ids="import_data")
 
-    print(df)  # !убрать!
-    # transformation
+    # Логируем датафрейм, который получили из xcom
+    print(df)
+
+    # Трансформируем данные
+    df_new = df.dropna()  # очищаем данные от пустых значений
+    df_new = df_new[(df_new['Sex'] == 'male') & (df_new['Age'] >= 30)]  # выбираем только мужчин старше 30
+
+    # Логируем измененный датафрейм
+    print('Transformed df:')
+    print(df_new)
 
     # Загружаем измененные данные в XCOM
-    ti.xcom_push(key="data", value=df)
+    ti.xcom_push(key="data", value=df_new)
 
 
 def export_data(file_name, file_path, **context):
     """Загрузить данные в новый csv файл"""
+
     # Вытаскиваем из XCOM данные, переданные функцией transform_data
     ti = context["task_instance"]
     df = ti.xcom_pull(key="data", task_ids="transform_data")
 
-    # path = f"{file_path}{file_name}.csv"
-    path = os.path.join(file_path, file_name)
+    path = os.path.join(file_path, file_name)  # полный путь до файла
 
-    print(df)  # !убрать!
+    # Логируем датафрейм, загружаемый в csv файл
+    print(df)
     print(f"Saving to {path}")
 
-    # Выгружаем датафрейм в csv файл с названием file_name, лежащий по пути file_path
+    # Выгружаем датафрейм в csv файл
     df.to_csv(path, index=False)
 
 
@@ -83,20 +83,20 @@ with DAG(
 
     "first",
     default_args=default_args,
-    description="Пустой даг",
+    description="Даг простого ETL процесса. Чтением данные из csv файла, очищает, обрабатывает и выгружает в новый файл",
     catchup=False,  # не выполняет запланированные по расписанию запуски DAG, которые находятся раньше текущей даты (если start_date раньше, чем текущая дата)
-
     schedule=None   # расписание в формате cron - с какой периодичностью будет автоматически выполняться DAG (None = DAG нужно запускать только мануально)
+
 ) as dag:
     # ------- Задачи -------
 
-    start = EmptyOperator(
-        task_id="start"
-    )
-
-    end = EmptyOperator(
-        task_id="end"
-    )
+    # start = EmptyOperator(
+    #     task_id="start"
+    # )
+    #
+    # end = EmptyOperator(
+    #     task_id="end"
+    # )
 
     import_data_task = PythonOperator(
         task_id="import_data",
@@ -120,9 +120,7 @@ with DAG(
 
     # ------- Порядок выполнения задач -------
     (
-        start
-        >> import_data_task
+        import_data_task
         >> transform_data_task
         >> export_data_task
-        >> end
     )
