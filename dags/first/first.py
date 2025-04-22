@@ -9,8 +9,8 @@ import os.path
 
 # ------- Переменные и константы -------
 
-INPUT_PATH = os.path.join(os.getcwd(), 'dags/input')
-OUTPUT_PATH = os.path.join(os.getcwd(), 'dags/output')
+INPUT_PATH = os.path.join(os.getcwd(), 'dags/first/input')
+OUTPUT_PATH = os.path.join(os.getcwd(), 'dags/first/output')
 
 
 # ------- Функции -------
