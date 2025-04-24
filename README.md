@@ -51,3 +51,7 @@
 
 ### `python_tasks`
 Папка, в которой хранятся все скрипты для выполнения заданий по Python
+
+- `first` - папка для первого задания
+  - `correlations.ipynb` - Jupyter Notebook с пояснениями к функции
+  - `correlations.py` - скрипт с функцией
