@@ -2,3 +2,5 @@
 /dags/__pycache__
 /.idea
 /dags/first/__pycache__
+/dags/second/cache
+/cache
