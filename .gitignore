@@ -4,3 +4,5 @@
 /dags/first/__pycache__
 /dags/second/cache
 /cache
+/.vscode
+python_tasks/second/input.csv
