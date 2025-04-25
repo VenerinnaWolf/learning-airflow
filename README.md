@@ -55,3 +55,7 @@
 - `first` - папка для первого задания
   - `correlations.ipynb` - Jupyter Notebook с пояснениями к функции
   - `correlations.py` - скрипт с функцией
+- `second` - папка для второго задания
+  - `input.csv` - большой csv файл для проверки работы функции (настолько большой, что git не хочет его хранить)
+  - `rows_count.ipynb` - Jupyter Notebook с пояснениями к функции
+  - `rows_count.py` - скрипт с функцией
