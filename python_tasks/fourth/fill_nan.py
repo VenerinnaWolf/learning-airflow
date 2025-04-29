@@ -1,44 +1,27 @@
 import pandas as pd
 
 
-def fill_nan(df: pd.DataFrame) -> pd.DataFrame:
+def fill_nan(df: pd.DataFrame, group_cols: list[str] = None) -> pd.DataFrame:
     """
     Заменяет пустые значения в целочисленных столбцах датафрейма
-    на среднее значение по столбцу.
+    на среднее значение по столбцу. 
+    Дополнительно можно передать столбцы для группировки.
     """
     # Скопируем изначальный датафрейм
     df_copy = df.copy()
-    df_copy
 
     # Ищем целочисленные столбцы
     numeric_cols = df_copy.select_dtypes('number').columns
-    numeric_cols
 
     # Заполняем средними значениями для каждого столбца
-    df_copy[numeric_cols] = df_copy[numeric_cols].fillna(
-        df_copy[numeric_cols].mean())
+    if group_cols is None:  # без группировки
+        df_copy[numeric_cols] = df_copy[numeric_cols].fillna(
+            df_copy[numeric_cols].mean())
+    else:  # с группировкой
+        df_copy[numeric_cols] = df_copy[numeric_cols].fillna(
+            df_copy.groupby(group_cols)[numeric_cols].transform('mean'))
     # Вместо функции `mean` можно использовать, например,
     # `median` или `mode` в зависимости от того, что больше подходит.
-
-    return df_copy
-
-
-def fill_nan_grouped(df: pd.DataFrame, group_cols: list[str]) -> pd.DataFrame:
-    """
-    Заменяет пустые значения в целочисленных столбцах датафрейма на среднее значение,
-    используя группировку по дополнительным столбцам `group_cols`.
-    """
-    # Скопируем изначальный датафрейм
-    df_copy = df.copy()
-    df_copy
-
-    # Ищем целочисленные столбцы
-    numeric_cols = df_copy.select_dtypes('number').columns
-    numeric_cols
-
-    # Заполняем средними значениями для каждого столбца, используя группировку
-    df_copy[numeric_cols] = df_copy[numeric_cols].fillna(
-        df_copy.groupby(group_cols)[numeric_cols].transform('mean'))
 
     return df_copy
 
@@ -56,8 +39,11 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(data)
     filled_df = fill_nan(df)
-    filled_grouped_df = fill_nan_grouped(df, ['sex'])
-    print('Заполнение пустых значений без группировки:')
+    filled_grouped_df = fill_nan(df, ['sex'])
+
+    print('Изначальный датафрейм:')
+    print(df)
+    print('\nЗаполнение пустых значений без группировки:')
     print(filled_df)
     print('\nЗаполнение пустых значений с группировкой по полу:')
     print(filled_grouped_df)
