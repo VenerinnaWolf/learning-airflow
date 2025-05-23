@@ -7,3 +7,5 @@
 /.vscode
 python_tasks/second/input.csv
 /dags/second/output
+/dags/second/__pycache__
+/venv1

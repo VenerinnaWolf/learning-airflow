@@ -1,0 +1,8 @@
+apache-airflow==2.10.5
+folium==0.19.6
+geopandas==1.0.1
+matplotlib==3.10.3
+numpy==2.2.6
+osmnx==2.0.3
+pandas==2.2.3
+Shapely==2.1.1
