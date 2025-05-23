@@ -3,13 +3,14 @@ from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import osmnx as ox
 import pandas as pd
 import geopandas as gpd
 import numpy as np
 import matplotlib.pyplot as plt
+import mapclassify
 import folium
 from shapely.geometry import Point
 
@@ -153,7 +154,51 @@ def count_distances_to_hospitals(buildings_file_path, hospitals_file_path, outpu
 def visualize_map(city_file_path, buildings_file_path, hospitals_file_path, output_file_path):
     """Отрисовка графика (карты) города со зданиями и загрузкой больниц.
     Сохранение карты в файл `output_file_path`"""
-    pass
+
+    # Загружаем данные из файлов
+    city_geometry = gpd.read_file(city_file_path)
+    buildings = gpd.read_file(buildings_file_path)
+    hospitals = gpd.read_file(hospitals_file_path)
+
+    # Меняем проекцию для файла hospitals на Web Mercator для отображения круга вокруг больниц
+    hospitals_proj = hospitals.to_crs(epsg=3857)
+
+    # Визуализируем:
+    # 1. Создаем базовую карту города
+    f = folium.Figure(width=750, height=500)
+    basemap = city_geometry.explore(tooltip=False, color='grey')
+    basemap.add_to(f)
+
+    # 2. Добавляем здания на карту
+    buildings.explore(tooltip=['distance_to_nearest_hospital'],
+                      column='distance_to_nearest_hospital',  # колонка для окраски по тепловой карте
+                      cmap='magma_r',  # тепловая карта
+                      m=basemap)
+
+    # 3. Добавляем круг вокруг больниц, который определяет радиус в 500 метров
+    for _, hospital in hospitals_proj.iterrows():
+        # Создаем буфер (координаты должны быть в проекции Web Mercator)
+        buffer_geom = hospital.geometry.buffer(500)  # 500 метров
+
+        # Переводим буфер обратно в систему координат, в которой рисует Folium
+        buffer_wgs84 = gpd.GeoSeries([buffer_geom], crs='EPSG:3857').to_crs(epsg=4326).iloc[0]
+
+        # Создаем текст подсказки при наведении 
+        tooltip = f'{hospital.buildings_count} зданий в радиусе 500 метров от больницы'
+
+        # Добавляем буфер на карту
+        folium.GeoJson(buffer_wgs84, tooltip=tooltip, style_function=lambda x: {
+            'fillColor': 'blue',
+            'color': 'blue',
+            'fillOpacity': 0.4,
+            'weight': 1,
+        }).add_to(basemap)
+
+    # 4. Добавляем больницы
+    hospitals.explore(tooltip=['name', 'id'], color='red', m=basemap)
+
+    # Сохраняем карту в файл
+    basemap.save(output_file_path)
 
 
 # ------- DAG -------
@@ -188,6 +233,7 @@ with DAG(
 
     get_city_data_task = PythonOperator(
         task_id="get_city_data",
+        execution_timeout=timedelta(minutes=30),
         python_callable=get_city_data,
         op_kwargs={"city": CITY_NAME,
                    "buildings_file_path": BUILDINGS_PATH,
@@ -196,6 +242,7 @@ with DAG(
 
     get_hospitals_task = PythonOperator(
         task_id="get_hospitals",
+        execution_timeout=timedelta(minutes=30),
         python_callable=get_hospitals,
         op_kwargs={"city": CITY_NAME,
                    "hospitals_file_path": HOSPITALS_PATH}
@@ -220,6 +267,7 @@ with DAG(
 
     visualize_map_task = PythonOperator(
         task_id="visualize_map",
+        execution_timeout=timedelta(minutes=30),
         python_callable=visualize_map,
         op_kwargs={"city_file_path": CITY_GEOMETRY_PATH,
                    "buildings_file_path": BUILDINGS_FINAL_PATH,
@@ -243,6 +291,5 @@ with DAG(
         >> [get_city_data_task, get_hospitals_task]
         >> split
         >> [count_buildings_task, count_distances_task]
-        >> split
         >> visualize_map_task
     )
